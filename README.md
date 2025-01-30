@@ -1,6 +1,6 @@
 # Playfair E-Commerce Platform
 
-A modern, microservices-based e-commerce platform built with Node.js, React, and Kubernetes.
+A modern, microservices-based e-commerce platform built with Node.js, React, and OpenShift.
 
 ## Architecture Overview
 
@@ -16,8 +16,8 @@ The platform consists of the following microservices:
 ## Prerequisites
 
 - Docker
-- Kubernetes cluster (local or cloud)
-- kubectl CLI
+- OpenShift cluster (local or cloud)
+- oc CLI
 - Node.js 20.x
 - npm 10.x
 
@@ -59,41 +59,62 @@ chmod +x build-images.sh
 
 This will build and push all service images to Docker Hub under the `aryansr` namespace.
 
-### 2. Deploy to Kubernetes
+### 2. Deploy to OpenShift
 
-1. Create the namespace:
+1. Login to your OpenShift cluster:
 ```bash
-kubectl apply -f k8s/namespace.yaml
+oc login --token=<your-token> --server=<your-server>
 ```
 
-2. Create storage resources:
+2. Create the project (namespace):
 ```bash
-# Update the node name in k8s/local-pv.yaml first!
-kubectl apply -f k8s/storage-class.yaml
-kubectl apply -f k8s/local-pv.yaml
+oc new-project playfair
 ```
 
-3. Create ConfigMap and Secrets:
+3. Create storage resources:
 ```bash
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml
+# Create PersistentVolume and StorageClass
+oc apply -f k8s/storage-class.yaml
+oc apply -f k8s/local-pv.yaml
 ```
 
-4. Deploy all services:
+4. Create ConfigMap and Secrets:
 ```bash
-kubectl apply -f k8s/
+oc create configmap playfair-config --from-file=k8s/configmap.yaml
+oc create secret generic playfair-secret --from-file=k8s/secret.yaml
+```
+
+5. Deploy all services:
+```bash
+oc apply -f k8s/
+```
+
+6. Create routes for external access:
+```bash
+oc expose service gateway
 ```
 
 ### 3. Verify Deployment
 
 Check the status of all pods:
 ```bash
-kubectl get pods -n playfair
+oc get pods -n playfair
 ```
 
-Check services:
+Check routes and services:
 ```bash
-kubectl get services -n playfair
+oc get routes -n playfair
+oc get services -n playfair
+```
+
+View deployment status:
+```bash
+oc status
+```
+
+Scale deployments if needed:
+```bash
+oc scale deployment/gateway --replicas=3
 ```
 
 ## Database Schema
@@ -109,16 +130,18 @@ The platform uses PostgreSQL with the following main tables:
 ## Monitoring
 
 The platform includes:
-- Kubernetes metrics server for basic monitoring
+- OpenShift monitoring and metrics
 - Liveness probes for service health checks
 - Resource limits and requests for all pods
+- Integration with OpenShift's built-in monitoring stack
 
 ## Security
 
 - Row Level Security (RLS) enabled for all database tables
-- Secure communication between services
+- Secure communication between services using OpenShift's internal network
 - Environment variables for sensitive data
-- Kubernetes secrets for credentials
+- OpenShift secrets for credentials
+- RBAC policies for access control
 
 ## Directory Structure
 
@@ -130,7 +153,7 @@ The platform includes:
 ├── cart/             # Cart service
 ├── checkout/         # Checkout service
 ├── postgres/         # PostgreSQL configuration
-├── k8s/              # Kubernetes manifests
+├── k8s/              # OpenShift/Kubernetes manifests
 ├── supabase/         # Database migrations
 └── build-images.sh   # Docker build script
 ```
